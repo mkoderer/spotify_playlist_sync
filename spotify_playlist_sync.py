@@ -9,7 +9,7 @@ import schedule
 import time
 
 
-logging.basicConfig(level=logging.WARNING)
+logging.basicConfig(format='%(asctime)s %(message)s', level=logging.WARNING)
 log = logging.getLogger()
 
 
