@@ -10,6 +10,7 @@ from mergedeep import merge, Strategy
 logging.basicConfig(level=logging.WARNING)
 log = logging.getLogger()
 
+
 def get_all(sp, function, *arg):
     log.info("Call get_all with function: %s" % function)
     func = getattr(sp, function)
@@ -19,6 +20,7 @@ def get_all(sp, function, *arg):
         res = sp.next(result)
         merge(result, res, strategy=Strategy.ADDITIVE)
     return result
+
 
 def auth(account, config):
     """Handles the authentication for the various accounts
@@ -31,9 +33,15 @@ def auth(account, config):
             redirect_uri=account.get("RedirectUrl"),
             cache_handler=handler,
             open_browser=config.get("OpenBrowser"),
-            scope="playlist-read-collaborative playlist-read-private user-library-read user-library-modify playlist-modify-private playlist-modify-public"))
+            scope="playlist-read-collaborative " +
+                  "playlist-read-private " +
+                  "user-library-read " +
+                  "user-library-modify " +
+                  "playlist-modify-private " +
+                  "playlist-modify-public"))
     log.info("Authenicated with user %s" % account["Username"])
     return sp
+
 
 def indentify_transfer_playlist(sp, config):
     playlists = get_all(sp, "current_user_playlists")
@@ -44,8 +52,9 @@ def indentify_transfer_playlist(sp, config):
             transfer_playlist = sp.playlist(playlist_id=playlist["id"])
             break
 
-    if transfer_playlist == None:
-        log.critical("No transfer playlist found (%s)" % config["SPOTIFY_TRANSFER_PLAYLIST"])
+    if transfer_playlist is None:
+        log.critical("No transfer playlist found (%s)" %
+                     config["SPOTIFY_TRANSFER_PLAYLIST"])
         exit(1)
     return transfer_playlist
 
@@ -58,10 +67,12 @@ def main(args):
         sp = auth(account, config)
 
         transfer_playlist = indentify_transfer_playlist(sp, config)
-        tracks_on_transfer = get_all(sp, "playlist_tracks", transfer_playlist.get("id"))
+        tracks_on_transfer = get_all(sp, "playlist_tracks",
+                                     transfer_playlist.get("id"))
         tracks_id_trans = {}
         for track in tracks_on_transfer["items"]:
-            tracks_id_trans[track.get("track").get("id")] =  track.get("track").get("name")
+            id = track["track"]["id"]
+            tracks_id_trans[id] = track["track"].get("name")
 
         tracks = get_all(sp, "current_user_saved_tracks")
         for track in tracks["items"]:
@@ -71,14 +82,15 @@ def main(args):
         if args.add and tracks_id_trans:
             log.info("Adding missing tracks")
             sp.current_user_saved_tracks_add(tracks_id_trans.keys())
-        
+
     if args.empty_transfer:
         sp = auth(config["accounts"][0], config)
-        tracks_on_transfer = get_all(sp, "playlist_tracks", transfer_playlist.get("id"))
+        tracks_on_transfer = get_all(sp, "playlist_tracks",
+                                     transfer_playlist.get("id"))
         tracks_id_trans = []
         for track in tracks_on_transfer["items"]:
             tracks_id_trans.append(track.get("track").get("id"))
-        
+
         transfer_playlist = indentify_transfer_playlist(sp, config)
         log.info("Removing tracks (%s) from %s" %
                  (tracks_id_trans, transfer_playlist["name"]))
@@ -88,13 +100,14 @@ def main(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description = 'Spotify playlist sync')
+    parser = argparse.ArgumentParser(description='Spotify playlist sync')
     parser.add_argument('--config-file', "-c",
                         help='Config file (default config.yaml)',
                         default="config.yaml")
     parser.add_argument('--add', action="store_true", default=False,
                         help='Add missing tracks to saved tracks')
-    parser.add_argument('--empty-transfer', "-e", action="store_true", default=False,
+    parser.add_argument('--empty-transfer', "-e", action="store_true",
+                        default=False,
                         help='Remove all songs from transfer playlist')
     args = parser.parse_args()
 
