@@ -2,7 +2,7 @@ import argparse
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth, CacheFileHandler
 import logging
-from pprint import pprint
+from pprint import pformat
 import yaml
 from mergedeep import merge, Strategy
 
@@ -21,22 +21,24 @@ def get_all(sp, function, *arg):
     return result
 
 def auth(account, config):
-        handler = CacheFileHandler(username=account["Username"])
-        sp = spotipy.Spotify(
-            auth_manager=SpotifyOAuth(
-                client_id=account.get("ClientId"),
-                client_secret=account["Secret"],
-                redirect_uri=account.get("RedirectUrl"),
-                cache_handler=handler,
-                open_browser=config.get("OpenBrowser"),
-                scope="playlist-read-collaborative playlist-read-private user-library-read user-library-modify"))
-        log.info("Authenicated with user %s" % account["Username"])
-        return sp
+    """Handles the authentication for the various accounts
+    """
+    handler = CacheFileHandler(username=account["Username"])
+    sp = spotipy.Spotify(
+        auth_manager=SpotifyOAuth(
+            client_id=account.get("ClientId"),
+            client_secret=account["Secret"],
+            redirect_uri=account.get("RedirectUrl"),
+            cache_handler=handler,
+            open_browser=config.get("OpenBrowser"),
+            scope="playlist-read-collaborative playlist-read-private user-library-read user-library-modify playlist-modify-private playlist-modify-public"))
+    log.info("Authenicated with user %s" % account["Username"])
+    return sp
 
 def indentify_transfer_playlist(sp, config):
-    playlists = sp.current_user_playlists()
+    playlists = get_all(sp, "current_user_playlists")
     transfer_playlist = None
-    
+
     for playlist in playlists['items']:
         if config["SpotifyTransferPlaylist"] == playlist.get("name"):
             transfer_playlist = sp.playlist(playlist_id=playlist["id"])
@@ -65,17 +67,24 @@ def main(args):
         for track in tracks["items"]:
             if track.get("track").get("id") in tracks_id_trans:
                 del tracks_id_trans[track.get("track").get("id")]
-        print ("## Missing tracks:")
-        pprint (tracks_id_trans)
+        log.info("Missing tracks :" + pformat(tracks_id_trans))
         if args.add and tracks_id_trans:
             log.info("Adding missing tracks")
             sp.current_user_saved_tracks_add(tracks_id_trans.keys())
         
     if args.empty_transfer:
         sp = auth(config["accounts"][0], config)
+        tracks_on_transfer = get_all(sp, "playlist_tracks", transfer_playlist.get("id"))
+        tracks_id_trans = []
+        for track in tracks_on_transfer["items"]:
+            tracks_id_trans.append(track.get("track").get("id"))
+        
         transfer_playlist = indentify_transfer_playlist(sp, config)
-        # TODO remove all tracks
-
+        log.info("Removing tracks (%s) from %s" %
+                 (tracks_id_trans, transfer_playlist["name"]))
+        sp.playlist_remove_all_occurrences_of_items(
+            playlist_id=transfer_playlist["id"],
+            items=tracks_id_trans)
 
 
 if __name__ == "__main__":
@@ -85,7 +94,7 @@ if __name__ == "__main__":
                         default="config.yaml")
     parser.add_argument('--add', action="store_true", default=False,
                         help='Add missing tracks to saved tracks')
-    parser.add_argument('--empty-transfer', action="store_true", default=False,
+    parser.add_argument('--empty-transfer', "-e", action="store_true", default=False,
                         help='Remove all songs from transfer playlist')
     args = parser.parse_args()
 
