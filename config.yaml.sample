@@ -1,0 +1,12 @@
+SpotifyTransferPlaylist: <PLAYLIST_NAME>
+OpenBrowser: true
+LogLevel: INFO
+accounts:
+  - Username: user1
+    ClientId: <ClientID>
+    Secret: <Secret>
+    RedirectUrl: http://localhost:8080/callback
+  - Username: user2
+    ClientId: <ClientID>
+    Secret: <Secret>
+    RedirectUrl: http://localhost:8080/callback
