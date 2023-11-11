@@ -5,6 +5,8 @@ import logging
 from pprint import pformat
 import yaml
 from mergedeep import merge, Strategy
+import schedule
+import time
 
 
 logging.basicConfig(level=logging.WARNING)
@@ -109,6 +111,18 @@ if __name__ == "__main__":
     parser.add_argument('--empty-transfer', "-e", action="store_true",
                         default=False,
                         help='Remove all songs from transfer playlist')
+    parser.add_argument('--daemon', "-d", action="store_true",
+                        default=False,
+                        help='Keep running and syncing')
+    parser.add_argument('--frequency',
+                        default=5,
+                        help='Sync frequency in minutes')
     args = parser.parse_args()
 
     main(args)
+    if args.daemon:
+        schedule.every(args.frequency).minutes.do(main, args=args)
+        log.info("Run every %s minutes from now" % args.frequency)
+        while True:
+            schedule.run_pending()
+            time.sleep(10)

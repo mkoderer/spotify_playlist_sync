@@ -1,4 +1,6 @@
-spotipy
-python_dotenv
-pyyaml
-mergedeep
+mergedeep==1.3.4
+python-dotenv==1.0.0
+requests==2.31.0
+schedule==1.2.1
+spotipy==2.23.0
+PyYAML==6.0.1
