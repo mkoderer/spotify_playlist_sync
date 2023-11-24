@@ -12,6 +12,7 @@ import time
 logging.basicConfig(format='%(asctime)s %(message)s', level=logging.WARNING)
 log = logging.getLogger()
 
+auth_cache = {}
 
 def get_all(sp, function, *arg):
     log.info("Call get_all with function: %s" % function)
@@ -27,6 +28,10 @@ def get_all(sp, function, *arg):
 def auth(account, config):
     """Handles the authentication for the various accounts
     """
+    global auth_cache
+    if account["Username"] in auth_cache:
+        return auth_cache[account["Username"]]
+
     handler = CacheFileHandler(username=account["Username"])
     sp = spotipy.Spotify(
         auth_manager=SpotifyOAuth(
@@ -35,13 +40,9 @@ def auth(account, config):
             redirect_uri=account.get("RedirectUrl"),
             cache_handler=handler,
             open_browser=config.get("OpenBrowser"),
-            scope="playlist-read-collaborative " +
-                  "playlist-read-private " +
-                  "user-library-read " +
-                  "user-library-modify " +
-                  "playlist-modify-private " +
-                  "playlist-modify-public"))
+            scope="user-read-recently-played user-read-currently-playing"))
     log.info("Authenicated with user %s" % account["Username"])
+    auth_cache[account["Username"]] = sp
     return sp
 
 
