@@ -15,7 +15,7 @@ log = logging.getLogger()
 auth_cache = {}
 
 def get_all(sp, function, *arg):
-    log.info("Call get_all with function: %s" % function)
+    log.debug("Call get_all with function: %s" % function)
     func = getattr(sp, function)
     result = func(*arg)
     while result.get("next"):
@@ -81,9 +81,8 @@ def main(args):
         for track in tracks["items"]:
             if track.get("track").get("id") in tracks_id_trans:
                 del tracks_id_trans[track.get("track").get("id")]
-        log.info("Missing tracks :" + pformat(tracks_id_trans))
         if args.add and tracks_id_trans:
-            log.info("Adding missing tracks")
+            log.info("Missing tracks :" + pformat(tracks_id_trans))
             sp.current_user_saved_tracks_add(tracks_id_trans.keys())
 
     if args.empty_transfer:
