@@ -99,11 +99,12 @@ def main(args):
             tracks_id_trans.append(track.get("track").get("id"))
 
         transfer_playlist = indentify_transfer_playlist(sp, config)
-        log.info("Removing tracks (%s) from %s" %
-                 (tracks_id_trans, transfer_playlist["name"]))
-        sp.playlist_remove_all_occurrences_of_items(
-            playlist_id=transfer_playlist["id"],
-            items=tracks_id_trans)
+        if tracks_id_trans:
+            log.info("Removing tracks (%s) from %s" %
+                    (tracks_id_trans, transfer_playlist["name"]))
+            sp.playlist_remove_all_occurrences_of_items(
+                playlist_id=transfer_playlist["id"],
+                items=tracks_id_trans)
 
 
 if __name__ == "__main__":
