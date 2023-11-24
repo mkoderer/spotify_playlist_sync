@@ -40,7 +40,12 @@ def auth(account, config):
             redirect_uri=account.get("RedirectUrl"),
             cache_handler=handler,
             open_browser=config.get("OpenBrowser"),
-            scope="user-read-recently-played user-read-currently-playing"))
+            scope="playlist-read-collaborative " +
+                  "playlist-read-private " +
+                  "user-library-read " +
+                  "user-library-modify " +
+                  "playlist-modify-private " +
+                  "playlist-modify-public"))
     log.info("Authenicated with user %s" % account["Username"])
     auth_cache[account["Username"]] = sp
     return sp
@@ -57,7 +62,7 @@ def indentify_transfer_playlist(sp, config):
 
     if transfer_playlist is None:
         log.critical("No transfer playlist found (%s)" %
-                     config["SPOTIFY_TRANSFER_PLAYLIST"])
+                     config["SpotifyTransferPlaylist"])
         exit(1)
     return transfer_playlist
 
