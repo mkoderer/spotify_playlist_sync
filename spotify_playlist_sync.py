@@ -79,8 +79,8 @@ def main(args):
                                      transfer_playlist.get("id"))
         tracks_id_trans = {}
         for track in tracks_on_transfer["items"]:
-            id = track["track"]["id"]
-            tracks_id_trans[id] = track["track"].get("name")
+            id = track["item"]["id"]
+            tracks_id_trans[id] = track["item"].get("name")
 
         tracks = get_all(sp, "current_user_saved_tracks")
         for track in tracks["items"]:
