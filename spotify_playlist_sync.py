@@ -14,10 +14,10 @@ log = logging.getLogger()
 
 auth_cache = {}
 
-def get_all(sp, function, *args):
+def get_all(sp, function, limit=50, *args):
     log.debug("Call get_all with function: %s" % function)
     func = getattr(sp, function)
-    result = func(*args, limit=100)
+    result = func(*args, limit=limit)
     while result.get("next"):
         log.debug("Next page for call %s" % function)
         res = sp.next(result)
@@ -79,12 +79,12 @@ def main(args):
 
         if transfer_playlist is None:
             transfer_playlist = indentify_transfer_playlist(sp, config)
-            tracks_on_transfer = get_all(sp, "playlist_tracks",
+            tracks_on_transfer = get_all(sp, "playlist_tracks", 100,
                                          transfer_playlist.get("id"))
 
         tracks_id_trans = {}
         for track in tracks_on_transfer["items"]:
-            tracks_id_trans[track["track"]["id"]] = track["track"].get("name")
+            tracks_id_trans[track["item"]["id"]] = track["item"].get("name")
 
         tracks = get_all(sp, "current_user_saved_tracks")
         for track in tracks["items"]:
@@ -100,12 +100,12 @@ def main(args):
         if transfer_playlist is None:
             sp = auth(config["accounts"][0], config)
             transfer_playlist = indentify_transfer_playlist(sp, config)
-            tracks_on_transfer = get_all(sp, "playlist_tracks",
+            tracks_on_transfer = get_all(sp, "playlist_tracks", 100,
                                          transfer_playlist.get("id"))
         else:
             sp = auth(config["accounts"][0], config)
 
-        tracks_id_trans = [track.get("track").get("id")
+        tracks_id_trans = [track.get("item").get("id")
                            for track in tracks_on_transfer["items"]]
         if tracks_id_trans:
             log.info("Removing tracks (%s) from %s" %
