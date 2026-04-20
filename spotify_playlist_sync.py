@@ -14,10 +14,10 @@ log = logging.getLogger()
 
 auth_cache = {}
 
-def get_all(sp, function, *arg):
+def get_all(sp, function, *args):
     log.debug("Call get_all with function: %s" % function)
     func = getattr(sp, function)
-    result = func(*arg)
+    result = func(*args, limit=100)
     while result.get("next"):
         log.debug("Next page for call %s" % function)
         res = sp.next(result)
@@ -45,7 +45,10 @@ def auth(account, config):
                   "user-library-read " +
                   "user-library-modify " +
                   "playlist-modify-private " +
-                  "playlist-modify-public"))
+                  "playlist-modify-public"),
+        retries=10,
+        status_retries=10,
+        backoff_factor=1.0)
     log.info("Authenicated with user %s" % account["Username"])
     auth_cache[account["Username"]] = sp
     return sp
