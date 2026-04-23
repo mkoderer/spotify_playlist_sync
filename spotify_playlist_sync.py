@@ -17,10 +17,15 @@ auth_cache = {}
 def get_all(sp, function, limit=50, *args):
     log.debug("Call get_all with function: %s" % function)
     func = getattr(sp, function)
-    result = func(*args, limit=limit)
+    try:
+        result = func(*args, limit=limit)
+    except spotipy.SpotifyException as e:
+        log.error(e)
+        raise e
     while result.get("next"):
         log.debug("Next page for call %s" % function)
         res = sp.next(result)
+        time.sleep(0.1)
         merge(result, res, strategy=Strategy.ADDITIVE)
     return result
 
@@ -46,8 +51,8 @@ def auth(account, config):
                   "user-library-modify " +
                   "playlist-modify-private " +
                   "playlist-modify-public"),
-        retries=10,
-        status_retries=10,
+        retries=5,
+        status_retries=5,
         backoff_factor=1.0)
     log.info("Authenicated with user %s" % account["Username"])
     auth_cache[account["Username"]] = sp
