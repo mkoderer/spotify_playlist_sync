@@ -60,11 +60,14 @@ def auth(account, config):
 
 
 def indentify_transfer_playlist(sp, config):
-    playlists = get_all(sp, "current_user_playlists")
-
-    for playlist in playlists['items']:
-        if config["SpotifyTransferPlaylist"] == playlist.get("name"):
-            return playlist
+    result = sp.current_user_playlists(limit=50)
+    while result:
+        for playlist in result['items']:
+            if config["SpotifyTransferPlaylist"] == playlist.get("name"):
+                return playlist
+        result = sp.next(result) if result.get("next") else None
+        if result:
+            time.sleep(0.1)
 
     log.critical("No transfer playlist found (%s)" %
                  config["SpotifyTransferPlaylist"])
@@ -91,11 +94,20 @@ def main(args):
         for track in tracks_on_transfer["items"]:
             tracks_id_trans[track["item"]["id"]] = track["item"].get("name")
 
+        # Check only the transfer tracks against saved tracks instead of fetching all saved tracks
         if tracks_id_trans:
-            tracks = get_all(sp, "current_user_saved_tracks")
-            for track in tracks["items"]:
-                if track.get("track").get("id") in tracks_id_trans:
-                    del tracks_id_trans[track.get("track").get("id")]
+            ids = list(tracks_id_trans.keys())
+            already_saved = set()
+            for i in range(0, len(ids), 50):
+                chunk = ids[i:i+50]
+                results = sp.current_user_saved_tracks_contains(chunk)
+                time.sleep(0.1)
+                for track_id, saved in zip(chunk, results):
+                    if saved:
+                        already_saved.add(track_id)
+            for track_id in already_saved:
+                del tracks_id_trans[track_id]
+
             if args.add and tracks_id_trans:
                 log.info("Missing tracks :" + pformat(tracks_id_trans))
                 ids = list(tracks_id_trans.keys())
