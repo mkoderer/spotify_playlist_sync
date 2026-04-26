@@ -70,13 +70,13 @@ def indentify_transfer_playlist(sp, config):
                  config["SpotifyTransferPlaylist"])
     exit(1)
 
+transfer_playlist = None
 
 def main(args):
     with open(args.config_file) as f:
         config = yaml.full_load(f)
     log.setLevel(config.get("LogLevel"))
 
-    transfer_playlist = None
     tracks_on_transfer = None
 
     for account in config.get("accounts"):
@@ -91,15 +91,16 @@ def main(args):
         for track in tracks_on_transfer["items"]:
             tracks_id_trans[track["item"]["id"]] = track["item"].get("name")
 
-        tracks = get_all(sp, "current_user_saved_tracks")
-        for track in tracks["items"]:
-            if track.get("track").get("id") in tracks_id_trans:
-                del tracks_id_trans[track.get("track").get("id")]
-        if args.add and tracks_id_trans:
-            log.info("Missing tracks :" + pformat(tracks_id_trans))
-            ids = list(tracks_id_trans.keys())
-            for i in range(0, len(ids), 50):
-                sp.current_user_saved_tracks_add(ids[i:i+50])
+        if tracks_id_trans:
+            tracks = get_all(sp, "current_user_saved_tracks")
+            for track in tracks["items"]:
+                if track.get("track").get("id") in tracks_id_trans:
+                    del tracks_id_trans[track.get("track").get("id")]
+            if args.add and tracks_id_trans:
+                log.info("Missing tracks :" + pformat(tracks_id_trans))
+                ids = list(tracks_id_trans.keys())
+                for i in range(0, len(ids), 50):
+                    sp.current_user_saved_tracks_add(ids[i:i+50])
 
     if args.empty_transfer:
         if transfer_playlist is None:
