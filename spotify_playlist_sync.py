@@ -13,6 +13,7 @@ logging.basicConfig(format='%(asctime)s %(message)s', level=logging.WARNING)
 log = logging.getLogger()
 
 auth_cache = {}
+saved_tracks_cache = {}  # username -> set of saved track IDs
 
 def get_all(sp, function, limit=50, *args):
     log.debug("Call get_all with function: %s" % function)
@@ -59,6 +60,29 @@ def auth(account, config):
     return sp
 
 
+def get_saved_tracks(sp, username):
+    """Fetch saved tracks incrementally, stopping early if all transfer IDs are already known.
+    Returns a set of saved track IDs. Results are cached across daemon runs."""
+    global saved_tracks_cache
+    if username not in saved_tracks_cache:
+        saved_tracks_cache[username] = set()
+
+    cache = saved_tracks_cache[username]
+    result = sp.current_user_saved_tracks(limit=50)
+    while result:
+        for item in result["items"]:
+            track_id = item["track"]["id"]
+            if track_id in cache:
+                # Reached a track we already know — rest of the list is known too
+                log.debug("Early exit: reached cached track %s" % track_id)
+                return cache
+            cache.add(track_id)
+        result = sp.next(result) if result.get("next") else None
+        if result:
+            time.sleep(0.1)
+    return cache
+
+
 def indentify_transfer_playlist(sp, config):
     result = sp.current_user_playlists(limit=50)
     while result:
@@ -94,25 +118,19 @@ def main(args):
         for track in tracks_on_transfer["items"]:
             tracks_id_trans[track["item"]["id"]] = track["item"].get("name")
 
-        # Check only the transfer tracks against saved tracks instead of fetching all saved tracks
+        # Check transfer tracks against cached saved tracks, fetching incrementally if needed
         if tracks_id_trans:
-            ids = list(tracks_id_trans.keys())
-            already_saved = set()
-            for i in range(0, len(ids), 50):
-                chunk = ids[i:i+50]
-                results = sp.current_user_saved_tracks_contains(chunk)
-                time.sleep(0.1)
-                for track_id, saved in zip(chunk, results):
-                    if saved:
-                        already_saved.add(track_id)
-            for track_id in already_saved:
-                del tracks_id_trans[track_id]
+            saved = get_saved_tracks(sp, account["Username"])
+            for track_id in list(tracks_id_trans.keys()):
+                if track_id in saved:
+                    del tracks_id_trans[track_id]
 
             if args.add and tracks_id_trans:
                 log.info("Missing tracks :" + pformat(tracks_id_trans))
                 ids = list(tracks_id_trans.keys())
                 for i in range(0, len(ids), 50):
                     sp.current_user_saved_tracks_add(ids[i:i+50])
+                saved_tracks_cache.get(account["Username"], set()).update(ids)
 
     if args.empty_transfer:
         if transfer_playlist is None:
