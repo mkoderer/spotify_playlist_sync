@@ -1,6 +1,20 @@
-FROM python:3.11-slim-bullseye
+FROM astralsh/uv:python3.11-slim
+
 WORKDIR /app
-COPY requirements.txt /src/
-RUN pip install -r /src/requirements.txt
-COPY spotify_playlist_sync.py /src
-CMD ["python3", "/src/spotify_playlist_sync.py", "-d", "--add", "-e"]
+
+# Enable bytecode compilation
+ENV UV_COMPILE_BYTECODE=1
+
+# Copy from the cache instead of linking since it's a container
+ENV UV_LINK_MODE=copy
+
+# Install the project's dependencies using the lockfile and pyproject.toml
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-install-project --no-dev
+
+# Then, copy the rest of the application code and install the project
+COPY . .
+RUN uv sync --frozen --no-dev
+
+# Run the application
+CMD ["uv", "run", "spotify_playlist_sync.py", "-d", "--add", "-e"]

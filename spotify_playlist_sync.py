@@ -122,7 +122,7 @@ def main(args):
                     items=tracks_id_trans[i:i+100])
 
 
-if __name__ == "__main__":
+def run():
     parser = argparse.ArgumentParser(description='Spotify playlist sync')
     parser.add_argument('--config-file', "-c",
                         help='Config file (default config.yaml)',
@@ -147,3 +147,7 @@ if __name__ == "__main__":
         while True:
             schedule.run_pending()
             time.sleep(10)
+
+
+if __name__ == "__main__":
+    run()
