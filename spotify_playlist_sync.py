@@ -12,6 +12,8 @@ import time
 logging.basicConfig(format='%(asctime)s %(message)s', level=logging.WARNING)
 log = logging.getLogger()
 
+transfer_playlist = None
+
 auth_cache = {}
 
 def get_all(sp, function, limit=50, *args):
@@ -70,9 +72,8 @@ def indentify_transfer_playlist(sp, config):
                  config["SpotifyTransferPlaylist"])
     exit(1)
 
-transfer_playlist = None
-
 def main(args):
+    global transfer_playlist
     with open(args.config_file) as f:
         config = yaml.full_load(f)
     log.setLevel(config.get("LogLevel"))
